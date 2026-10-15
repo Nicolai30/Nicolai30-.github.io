@@ -1,0 +1,52 @@
+name: Publicar My Mind Mobile
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Extraer My Mind
+        run: |
+          mkdir -p public
+          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: No se encontro el ZIP"
+            exit 1
+          fi
+          unzip -q "$ZIP" -d public
+          if [ ! -f public/index.html ]; then
+            echo "ERROR: index.html no esta en la raiz del ZIP"
+            exit 1
+          fi
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar archivos
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Publicar aplicacion
+        id: deployment
+        uses: actions/deploy-pages@v4
